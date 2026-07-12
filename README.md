@@ -1,2 +1,2 @@
 # referent
-Referent app for learning attitude
+Переводчик с ИИ обработкой
