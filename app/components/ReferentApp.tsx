@@ -63,13 +63,34 @@ export default function ReferentApp() {
     setResult("");
 
     try {
-      // Заглушка до подключения парсинга и AI
-      await new Promise((resolve) => setTimeout(resolve, 1200));
-      setResult(
-        `Здесь появится результат для действия «${ACTION_TITLES[action]}».\n\nURL: ${trimmedUrl}\n\nПодключите API для парсинга статьи и генерации ответа.`
+      const response = await fetch("/api/parse", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url: trimmedUrl }),
+      });
+
+      const data = (await response.json()) as {
+        date?: string | null;
+        title?: string | null;
+        content?: string | null;
+        error?: string;
+      };
+
+      if (!response.ok) {
+        throw new Error(data.error ?? "Не удалось распарсить статью");
+      }
+
+      const parsed = {
+        date: data.date ?? null,
+        title: data.title ?? null,
+        content: data.content ?? null,
+      };
+
+      setResult(JSON.stringify(parsed, null, 2));
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : "Не удалось выполнить действие. Попробуйте ещё раз."
       );
-    } catch {
-      setError("Не удалось выполнить действие. Попробуйте ещё раз.");
     } finally {
       setLoading(false);
     }
