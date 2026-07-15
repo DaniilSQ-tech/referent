@@ -2,9 +2,14 @@
 
 import { useState } from "react";
 
-type Action = "summary" | "theses" | "telegram";
+type Action = "summary" | "theses" | "telegram" | "translate";
 
 const ACTIONS: { id: Action; label: string; description: string }[] = [
+  {
+    id: "translate",
+    label: "Перевод",
+    description: "Полный перевод статьи на русский",
+  },
   {
     id: "summary",
     label: "О чем статья?",
@@ -23,9 +28,17 @@ const ACTIONS: { id: Action; label: string; description: string }[] = [
 ];
 
 const ACTION_TITLES: Record<Action, string> = {
+  translate: "Перевод",
   summary: "О чем статья?",
   theses: "Тезисы",
   telegram: "Пост для Telegram",
+};
+
+const LOADING_LABELS: Record<Action, string> = {
+  translate: "Перевод статьи…",
+  summary: "Загрузка статьи…",
+  theses: "Загрузка статьи…",
+  telegram: "Загрузка статьи…",
 };
 
 function isValidUrl(value: string): boolean {
@@ -63,6 +76,26 @@ export default function ReferentApp() {
     setResult("");
 
     try {
+      if (action === "translate") {
+        const response = await fetch("/api/translate", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ url: trimmedUrl }),
+        });
+
+        const data = (await response.json()) as {
+          translation?: string;
+          error?: string;
+        };
+
+        if (!response.ok) {
+          throw new Error(data.error ?? "Не удалось перевести статью");
+        }
+
+        setResult(data.translation ?? "");
+        return;
+      }
+
       const response = await fetch("/api/parse", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -133,7 +166,7 @@ export default function ReferentApp() {
           </p>
         ) : null}
 
-        <div className="mt-6 grid gap-3 sm:grid-cols-3">
+        <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           {ACTIONS.map((action) => (
             <button
               key={action.id}
@@ -171,7 +204,7 @@ export default function ReferentApp() {
           {loading ? (
             <div className="flex items-center gap-3 text-slate-400">
               <span className="inline-block h-5 w-5 animate-spin rounded-full border-2 border-slate-600 border-t-sky-400" />
-              <span>Генерация ответа…</span>
+              <span>{LOADING_LABELS[activeAction ?? "summary"]}</span>
             </div>
           ) : result ? (
             <pre className="whitespace-pre-wrap break-words font-sans text-sm leading-7 text-slate-200">
