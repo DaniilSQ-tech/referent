@@ -1,5 +1,7 @@
+import { prepareArticleText } from "@/lib/article-text";
+
 const DEFAULT_BASE_URL = "https://openrouter.ai/api/v1";
-const DEEPSEEK_MODEL = "deepseek/deepseek-chat";
+const DEFAULT_MODEL = "openrouter/free";
 
 type ChatMessage = {
   role: "system" | "user" | "assistant";
@@ -25,6 +27,7 @@ export async function chatCompletion(messages: ChatMessage[]): Promise<string> {
   }
 
   const baseUrl = process.env.OPENAI_BASE_URL?.replace(/\/$/, "") ?? DEFAULT_BASE_URL;
+  const model = process.env.OPENROUTER_MODEL ?? DEFAULT_MODEL;
 
   const response = await fetch(`${baseUrl}/chat/completions`, {
     method: "POST",
@@ -35,50 +38,48 @@ export async function chatCompletion(messages: ChatMessage[]): Promise<string> {
       "X-Title": "Referent",
     },
     body: JSON.stringify({
-      model: DEEPSEEK_MODEL,
+      model,
       messages,
     }),
   });
 
   const raw = await response.text();
 
-  let data: ChatCompletionResponse;
+  let data: ChatCompletionResponse & { message?: string };
   try {
-    data = JSON.parse(raw) as ChatCompletionResponse;
+    data = JSON.parse(raw) as ChatCompletionResponse & { message?: string };
   } catch {
-    throw new Error("OpenRouter вернул некорректный ответ");
+    throw new Error(
+      response.ok
+        ? "OpenRouter вернул некорректный ответ"
+        : `OpenRouter вернул ошибку: HTTP ${response.status}`
+    );
   }
 
   if (!response.ok) {
-    throw new Error(data.error?.message ?? `OpenRouter вернул ошибку: HTTP ${response.status}`);
+    const apiMessage = data.error?.message ?? data.message;
+
+    if (response.status === 403) {
+      throw new Error(
+        apiMessage ??
+          "OpenRouter отклонил запрос (403). Проверьте API-ключ, настройки приватности на openrouter.ai/settings/privacy и модель OPENROUTER_MODEL."
+      );
+    }
+
+    throw new Error(apiMessage ?? `OpenRouter вернул ошибку: HTTP ${response.status}`);
   }
 
   const content = data.choices?.[0]?.message?.content?.trim();
 
   if (!content) {
-    throw new Error("OpenRouter не вернул текст перевода");
+    throw new Error("OpenRouter не вернул текст ответа");
   }
 
   return content;
 }
 
 export async function translateArticle(title: string | null, content: string | null): Promise<string> {
-  if (!content) {
-    throw new Error("Не удалось извлечь текст статьи для перевода");
-  }
-
-  const maxContentLength = 12000;
-  const truncatedContent =
-    content.length > maxContentLength
-      ? `${content.slice(0, maxContentLength)}\n\n[Текст обрезан из-за ограничения длины]`
-      : content;
-
-  const articleText = [
-    title ? `Title: ${title}` : null,
-    `Content:\n${truncatedContent}`,
-  ]
-    .filter(Boolean)
-    .join("\n\n");
+  const article = prepareArticleText(title, content);
 
   return chatCompletion([
     {
@@ -88,7 +89,61 @@ export async function translateArticle(title: string | null, content: string | n
     },
     {
       role: "user",
-      content: `Переведи эту статью на русский:\n\n${articleText}`,
+      content: `Переведи эту статью на русский:\n\n${article.text}`,
     },
   ]);
+}
+
+export async function summarizeArticle(title: string | null, content: string | null): Promise<string> {
+  const article = prepareArticleText(title, content);
+
+  return chatCompletion([
+    {
+      role: "system",
+      content:
+        "Ты редактор и аналитик. Кратко и понятно объясняй на русском языке, о чём англоязычная статья. Пиши 2–4 абзаца, без воды и без вводных фраз вроде «В этой статье».",
+    },
+    {
+      role: "user",
+      content: `Кратко опиши, о чём эта статья:\n\n${article.text}`,
+    },
+  ]);
+}
+
+export async function extractTheses(title: string | null, content: string | null): Promise<string> {
+  const article = prepareArticleText(title, content);
+
+  return chatCompletion([
+    {
+      role: "system",
+      content:
+        "Ты редактор. Выделяй ключевые тезисы англоязычных статей на русском языке. Верни 5–10 пунктов в виде маркированного списка. Каждый тезис — одна ёмкая мысль, без повторов и без комментариев.",
+    },
+    {
+      role: "user",
+      content: `Выдели ключевые тезисы этой статьи:\n\n${article.text}`,
+    },
+  ]);
+}
+
+export async function generateTelegramPost(
+  title: string | null,
+  content: string | null,
+  sourceUrl: string
+): Promise<string> {
+  const article = prepareArticleText(title, content);
+
+  const post = await chatCompletion([
+    {
+      role: "system",
+      content:
+        "Ты SMM-редактор. Пиши посты для Telegram на русском языке по англоязычным статьям. Структура: цепляющий заголовок, краткая суть, призыв к прочтению или обсуждению. Длина до 1500 символов. Не используй markdown-таблицы и сложное форматирование. Не добавляй блок «Источник» — он будет добавлен автоматически.",
+    },
+    {
+      role: "user",
+      content: `Напиши пост для Telegram на основе этой статьи:\n\n${article.text}`,
+    },
+  ]);
+
+  return `${post.trim()}\n\nИсточник: *${sourceUrl}*`;
 }

@@ -37,9 +37,23 @@ const ACTION_TITLES: Record<Action, string> = {
 
 const LOADING_LABELS: Record<Action, string> = {
   translate: "Перевод статьи…",
-  summary: "Загрузка статьи…",
-  theses: "Загрузка статьи…",
-  telegram: "Загрузка статьи…",
+  summary: "Анализ статьи…",
+  theses: "Формирование тезисов…",
+  telegram: "Создание поста…",
+};
+
+const ACTION_ENDPOINTS: Record<Action, string> = {
+  translate: "/api/translate",
+  summary: "/api/summary",
+  theses: "/api/theses",
+  telegram: "/api/telegram",
+};
+
+const ACTION_ERRORS: Record<Action, string> = {
+  translate: "Не удалось перевести статью",
+  summary: "Не удалось проанализировать статью",
+  theses: "Не удалось сформировать тезисы",
+  telegram: "Не удалось создать пост",
 };
 
 function isValidUrl(value: string): boolean {
@@ -77,50 +91,23 @@ export default function ReferentApp() {
     setResult("");
 
     try {
-      if (action === "translate") {
-        const response = await fetch("/api/translate", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ url: trimmedUrl }),
-        });
-
-        const data = await readJsonResponse<{
-          translation?: string;
-          error?: string;
-        }>(response);
-
-        if (!response.ok) {
-          throw new Error(data.error ?? "Не удалось перевести статью");
-        }
-
-        setResult(data.translation ?? "");
-        return;
-      }
-
-      const response = await fetch("/api/parse", {
+      const response = await fetch(ACTION_ENDPOINTS[action], {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ url: trimmedUrl }),
       });
 
       const data = await readJsonResponse<{
-        date?: string | null;
-        title?: string | null;
-        content?: string | null;
+        result?: string;
+        translation?: string;
         error?: string;
       }>(response);
 
       if (!response.ok) {
-        throw new Error(data.error ?? "Не удалось распарсить статью");
+        throw new Error(data.error ?? ACTION_ERRORS[action]);
       }
 
-      const parsed = {
-        date: data.date ?? null,
-        title: data.title ?? null,
-        content: data.content ?? null,
-      };
-
-      setResult(JSON.stringify(parsed, null, 2));
+      setResult(action === "translate" ? (data.translation ?? "") : (data.result ?? ""));
     } catch (err) {
       setError(
         err instanceof Error ? err.message : "Не удалось выполнить действие. Попробуйте ещё раз."
