@@ -23,7 +23,9 @@ export async function chatCompletion(messages: ChatMessage[]): Promise<string> {
   const apiKey = process.env.OPENROUTER_API_KEY;
 
   if (!apiKey) {
-    throw new Error("OPENROUTER_API_KEY не задан в .env.local");
+    throw new Error(
+      "OPENROUTER_API_KEY не задан. Локально добавьте его в .env.local, на Vercel — в Settings → Environment Variables."
+    );
   }
 
   const baseUrl = process.env.OPENAI_BASE_URL?.replace(/\/$/, "") ?? DEFAULT_BASE_URL;
