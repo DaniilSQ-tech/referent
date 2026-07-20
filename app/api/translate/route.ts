@@ -2,6 +2,9 @@ import { NextResponse } from "next/server";
 import { translateArticle } from "@/lib/openrouter";
 import { fetchAndParseArticle } from "@/lib/parse-article";
 
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+
 export async function POST(request: Request) {
   try {
     const body = (await request.json()) as { url?: string };

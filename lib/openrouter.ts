@@ -40,7 +40,14 @@ export async function chatCompletion(messages: ChatMessage[]): Promise<string> {
     }),
   });
 
-  const data = (await response.json()) as ChatCompletionResponse;
+  const raw = await response.text();
+
+  let data: ChatCompletionResponse;
+  try {
+    data = JSON.parse(raw) as ChatCompletionResponse;
+  } catch {
+    throw new Error("OpenRouter вернул некорректный ответ");
+  }
 
   if (!response.ok) {
     throw new Error(data.error?.message ?? `OpenRouter вернул ошибку: HTTP ${response.status}`);

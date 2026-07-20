@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { readJsonResponse } from "@/lib/read-json-response";
 
 type Action = "summary" | "theses" | "telegram" | "translate";
 
@@ -83,10 +84,10 @@ export default function ReferentApp() {
           body: JSON.stringify({ url: trimmedUrl }),
         });
 
-        const data = (await response.json()) as {
+        const data = await readJsonResponse<{
           translation?: string;
           error?: string;
-        };
+        }>(response);
 
         if (!response.ok) {
           throw new Error(data.error ?? "Не удалось перевести статью");
@@ -102,12 +103,12 @@ export default function ReferentApp() {
         body: JSON.stringify({ url: trimmedUrl }),
       });
 
-      const data = (await response.json()) as {
+      const data = await readJsonResponse<{
         date?: string | null;
         title?: string | null;
         content?: string | null;
         error?: string;
-      };
+      }>(response);
 
       if (!response.ok) {
         throw new Error(data.error ?? "Не удалось распарсить статью");
