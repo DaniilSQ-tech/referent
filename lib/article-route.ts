@@ -19,7 +19,10 @@ export async function runArticleRoute(
     const article = await fetchAndParseArticle(url);
     const payload = await handler(article, url);
 
-    return NextResponse.json(payload);
+    return NextResponse.json({
+      ...payload,
+      title: article.title ?? "",
+    });
   } catch (error) {
     const { code, status } = toApiErrorResponse(error);
 

@@ -1,9 +1,26 @@
 @import "tailwindcss";
 
 @theme {
-  --font-sans: "Segoe UI", system-ui, -apple-system, sans-serif;
+  --font-sans:
+    -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text",
+    "Helvetica Neue", system-ui, sans-serif;
+  --color-apple-bg: #000000;
+  --color-apple-elevated: #1c1c1e;
+  --color-apple-grouped: #2c2c2e;
+  --color-apple-blue: #0a84ff;
+  --color-apple-blue-hover: #409cff;
+  --color-apple-label: #ffffff;
+  --color-apple-secondary: rgba(235, 235, 245, 0.6);
+  --color-apple-tertiary: rgba(235, 235, 245, 0.3);
+  --color-apple-separator: rgba(84, 84, 88, 0.65);
+  --color-apple-red: #ff453a;
 }
 
 body {
-  @apply min-h-screen overflow-x-hidden bg-slate-950 text-slate-100 antialiased;
+  @apply min-h-screen overflow-x-hidden bg-black text-white antialiased;
+  font-feature-settings: "kern" 1, "liga" 1;
+}
+
+::selection {
+  background: rgba(10, 132, 255, 0.35);
 }

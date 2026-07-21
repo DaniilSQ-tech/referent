@@ -4,13 +4,13 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
 
 const alertVariants = cva(
-  "relative w-full rounded-xl border px-4 py-3 text-sm [&>svg+div]:translate-y-[-3px] [&>svg]:absolute [&>svg]:left-4 [&>svg]:top-4 [&>svg~*]:pl-7",
+  "relative w-full rounded-2xl border px-4 py-3.5 text-sm backdrop-blur-xl [&>svg+div]:translate-y-[-3px] [&>svg]:absolute [&>svg]:left-4 [&>svg]:top-4 [&>svg~*]:pl-7",
   {
     variants: {
       variant: {
-        default: "border-slate-700 bg-slate-900/80 text-slate-200",
+        default: "border-white/10 bg-[#1C1C1E]/90 text-white",
         destructive:
-          "border-rose-500/40 bg-rose-500/10 text-rose-100 [&>svg]:text-rose-400",
+          "border-[#FF453A]/30 bg-[#FF453A]/10 text-[#FF6961] [&>svg]:text-[#FF453A]",
       },
     },
     defaultVariants: {
@@ -38,7 +38,7 @@ function AlertTitle({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div
       data-slot="alert-title"
-      className={cn("mb-1 font-medium leading-none tracking-tight", className)}
+      className={cn("mb-1 font-semibold leading-none tracking-tight", className)}
       {...props}
     />
   );
@@ -52,7 +52,7 @@ function AlertDescription({
     <div
       data-slot="alert-description"
       className={cn(
-        "break-words text-sm leading-relaxed opacity-90",
+        "break-words text-sm leading-relaxed text-[rgba(235,235,245,0.75)]",
         className
       )}
       {...props}
