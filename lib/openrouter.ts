@@ -1,3 +1,4 @@
+import { ApiError } from "@/lib/api-errors";
 import { prepareArticleText } from "@/lib/article-text";
 
 const DEFAULT_BASE_URL = "https://openrouter.ai/api/v1";
@@ -23,9 +24,7 @@ export async function chatCompletion(messages: ChatMessage[]): Promise<string> {
   const apiKey = process.env.OPENROUTER_API_KEY;
 
   if (!apiKey) {
-    throw new Error(
-      "OPENROUTER_API_KEY не задан. Локально добавьте его в .env.local, на Vercel — в Settings → Environment Variables."
-    );
+    throw new ApiError("AI_CONFIG", 503);
   }
 
   const baseUrl = process.env.OPENAI_BASE_URL?.replace(/\/$/, "") ?? DEFAULT_BASE_URL;
@@ -51,30 +50,17 @@ export async function chatCompletion(messages: ChatMessage[]): Promise<string> {
   try {
     data = JSON.parse(raw) as ChatCompletionResponse & { message?: string };
   } catch {
-    throw new Error(
-      response.ok
-        ? "OpenRouter вернул некорректный ответ"
-        : `OpenRouter вернул ошибку: HTTP ${response.status}`
-    );
+    throw new ApiError("AI_FAILED", response.ok ? 502 : response.status);
   }
 
   if (!response.ok) {
-    const apiMessage = data.error?.message ?? data.message;
-
-    if (response.status === 403) {
-      throw new Error(
-        apiMessage ??
-          "OpenRouter отклонил запрос (403). Проверьте API-ключ, настройки приватности на openrouter.ai/settings/privacy и модель OPENROUTER_MODEL."
-      );
-    }
-
-    throw new Error(apiMessage ?? `OpenRouter вернул ошибку: HTTP ${response.status}`);
+    throw new ApiError("AI_FAILED", response.status);
   }
 
   const content = data.choices?.[0]?.message?.content?.trim();
 
   if (!content) {
-    throw new Error("OpenRouter не вернул текст ответа");
+    throw new ApiError("AI_FAILED", 502);
   }
 
   return content;

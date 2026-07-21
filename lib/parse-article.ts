@@ -1,4 +1,5 @@
 import * as cheerio from "cheerio";
+import { ApiError } from "@/lib/api-errors";
 
 export type ParsedArticle = {
   date: string | null;
@@ -130,20 +131,31 @@ export function parseArticleHtml(html: string): ParsedArticle {
   };
 }
 
+const FETCH_TIMEOUT_MS = 15000;
+
 export async function fetchAndParseArticle(url: string): Promise<ParsedArticle> {
-  const response = await fetch(url, {
-    headers: {
-      "User-Agent":
-        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
-      Accept: "text/html,application/xhtml+xml",
-    },
-    redirect: "follow",
-  });
+  try {
+    const response = await fetch(url, {
+      headers: {
+        "User-Agent":
+          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
+        Accept: "text/html,application/xhtml+xml",
+      },
+      redirect: "follow",
+      signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
+    });
 
-  if (!response.ok) {
-    throw new Error(`Не удалось загрузить страницу: HTTP ${response.status}`);
+    if (!response.ok) {
+      throw new ApiError("ARTICLE_FETCH_FAILED", 502);
+    }
+
+    const html = await response.text();
+    return parseArticleHtml(html);
+  } catch (error) {
+    if (error instanceof ApiError) {
+      throw error;
+    }
+
+    throw new ApiError("ARTICLE_FETCH_FAILED", 502);
   }
-
-  const html = await response.text();
-  return parseArticleHtml(html);
 }

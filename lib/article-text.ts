@@ -1,3 +1,5 @@
+import { ApiError } from "@/lib/api-errors";
+
 export const MAX_ARTICLE_CONTENT_LENGTH = 12000;
 
 export type PreparedArticleText = {
@@ -13,7 +15,7 @@ export function prepareArticleText(
   maxContentLength = MAX_ARTICLE_CONTENT_LENGTH
 ): PreparedArticleText {
   if (!content) {
-    throw new Error("Не удалось извлечь текст статьи");
+    throw new ApiError("ARTICLE_EMPTY", 422);
   }
 
   const truncated = content.length > maxContentLength;
