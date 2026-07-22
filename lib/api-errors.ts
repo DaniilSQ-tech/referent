@@ -6,6 +6,8 @@ export const API_ERROR_CODES = [
   "ARTICLE_EMPTY",
   "AI_FAILED",
   "AI_CONFIG",
+  "OPENROUTER_CONFIG",
+  "HUGGINGFACE_CONFIG",
   "SERVER_ERROR",
 ] as const;
 

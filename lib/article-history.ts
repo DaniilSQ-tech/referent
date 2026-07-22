@@ -12,7 +12,13 @@ const STORAGE_KEY = "referent-article-history";
 const LEGACY_STORAGE_KEY = "referent-translation-history";
 const MAX_ITEMS = 30;
 
-const ACTIONS: Action[] = ["translate", "summary", "theses", "telegram"];
+const ACTIONS: Action[] = [
+  "translate",
+  "summary",
+  "theses",
+  "telegram",
+  "illustration",
+];
 
 function isAction(value: unknown): value is Action {
   return typeof value === "string" && ACTIONS.includes(value as Action);

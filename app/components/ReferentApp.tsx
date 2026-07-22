@@ -7,6 +7,7 @@ import {
   ChevronRight,
   Copy,
   FileText,
+  Image,
   Languages,
   ListChecks,
   RotateCcw,
@@ -33,6 +34,7 @@ const ACTION_ICONS: Record<Action, LucideIcon> = {
   summary: FileText,
   theses: ListChecks,
   telegram: Send,
+  illustration: Image,
 };
 
 const ACTIONS: {
@@ -65,6 +67,12 @@ const ACTIONS: {
     description: "Готовый пост для публикации",
     icon: ACTION_ICONS.telegram,
   },
+  {
+    id: "illustration",
+    label: "Иллюстрация",
+    description: "Изображение по теме статьи",
+    icon: ACTION_ICONS.illustration,
+  },
 ];
 
 const ACTION_TITLES: Record<Action, string> = {
@@ -72,6 +80,7 @@ const ACTION_TITLES: Record<Action, string> = {
   summary: "О чем статья?",
   theses: "Тезисы",
   telegram: "Пост для Telegram",
+  illustration: "Иллюстрация",
 };
 
 const LOADING_LABELS: Record<Action, string> = {
@@ -79,6 +88,7 @@ const LOADING_LABELS: Record<Action, string> = {
   summary: "Анализ статьи…",
   theses: "Формирование тезисов…",
   telegram: "Создание поста…",
+  illustration: "Создание промпта и иллюстрации…",
 };
 
 const ACTION_ENDPOINTS: Record<Action, string> = {
@@ -86,7 +96,12 @@ const ACTION_ENDPOINTS: Record<Action, string> = {
   summary: "/api/summary",
   theses: "/api/theses",
   telegram: "/api/telegram",
+  illustration: "/api/illustration",
 };
+
+function isImageResult(value: string): boolean {
+  return value.startsWith("data:image/");
+}
 
 function isValidUrl(value: string): boolean {
   try {
@@ -102,6 +117,7 @@ export default function ReferentApp() {
   const [url, setUrl] = useState("");
   const [activeAction, setActiveAction] = useState<Action | null>(null);
   const [result, setResult] = useState("");
+  const [resultPrompt, setResultPrompt] = useState("");
   const [loading, setLoading] = useState(false);
   const [errorCode, setErrorCode] = useState<ClientErrorCode | null>(null);
   const [copied, setCopied] = useState(false);
@@ -119,6 +135,7 @@ export default function ReferentApp() {
     setUrl("");
     setActiveAction(null);
     setResult("");
+    setResultPrompt("");
     setLoading(false);
     setErrorCode(null);
     setCopied(false);
@@ -131,7 +148,7 @@ export default function ReferentApp() {
   }, [result, loading]);
 
   async function handleCopy() {
-    if (!result) return;
+    if (!result || isImageResult(result)) return;
 
     try {
       await navigator.clipboard.writeText(result);
@@ -159,6 +176,7 @@ export default function ReferentApp() {
     setActiveAction(action);
     setLoading(true);
     setResult("");
+    setResultPrompt("");
     setCopied(false);
 
     try {
@@ -172,6 +190,7 @@ export default function ReferentApp() {
         result?: string;
         translation?: string;
         title?: string;
+        imagePrompt?: string;
         code?: string;
       }>(response);
 
@@ -184,6 +203,7 @@ export default function ReferentApp() {
         action === "translate" ? (data.translation ?? "") : (data.result ?? "");
 
       setResult(nextResult);
+      setResultPrompt(action === "illustration" ? (data.imagePrompt ?? "") : "");
       setHistory(
         addArticleHistoryItem(trimmedUrl, data.title ?? null, action)
       );
@@ -202,6 +222,7 @@ export default function ReferentApp() {
   const hasState =
     url.trim().length > 0 ||
     result.length > 0 ||
+    resultPrompt.length > 0 ||
     errorCode !== null ||
     activeAction !== null;
 
@@ -336,7 +357,7 @@ export default function ReferentApp() {
             Результат
           </h2>
           <div className="flex flex-wrap items-center gap-2">
-            {!loading && result ? (
+            {!loading && result && !isImageResult(result) ? (
               <Button
                 type="button"
                 variant="outline"
@@ -367,11 +388,26 @@ export default function ReferentApp() {
         </div>
 
         <div className="min-h-64 overflow-hidden rounded-[1.25rem] bg-[#1C1C1E] p-4 shadow-[0_20px_60px_rgba(0,0,0,0.35)] ring-1 ring-white/10 sm:p-6">
-          <div className="flex min-w-0 items-start overflow-hidden">
+          <div className="flex min-w-0 flex-col items-start overflow-hidden">
             {!loading && result ? (
-              <pre className="max-w-full min-w-0 whitespace-pre-wrap break-words font-sans text-[15px] leading-7 text-[rgba(235,235,245,0.92)]">
-                {result}
-              </pre>
+              isImageResult(result) ? (
+                <div className="w-full">
+                  <img
+                    src={result}
+                    alt="Иллюстрация к статье"
+                    className="max-w-full rounded-xl ring-1 ring-white/10"
+                  />
+                  {resultPrompt ? (
+                    <p className="mt-4 text-[13px] leading-5 text-[rgba(235,235,245,0.45)]">
+                      Промпт: {resultPrompt}
+                    </p>
+                  ) : null}
+                </div>
+              ) : (
+                <pre className="max-w-full min-w-0 whitespace-pre-wrap break-words font-sans text-[15px] leading-7 text-[rgba(235,235,245,0.92)]">
+                  {result}
+                </pre>
+              )
             ) : (
               <p className="text-[15px] leading-6 text-[rgba(235,235,245,0.35)]">
                 Результат появится здесь после выбора действия.

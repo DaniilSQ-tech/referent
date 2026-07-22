@@ -24,7 +24,7 @@ export async function chatCompletion(messages: ChatMessage[]): Promise<string> {
   const apiKey = process.env.OPENROUTER_API_KEY;
 
   if (!apiKey) {
-    throw new ApiError("AI_CONFIG", 503);
+    throw new ApiError("OPENROUTER_CONFIG", 503);
   }
 
   const baseUrl = process.env.OPENAI_BASE_URL?.replace(/\/$/, "") ?? DEFAULT_BASE_URL;
@@ -134,4 +134,23 @@ export async function generateTelegramPost(
   ]);
 
   return `${post.trim()}\n\nИсточник: *${sourceUrl}*`;
+}
+
+export async function generateIllustrationPrompt(
+  title: string | null,
+  content: string | null
+): Promise<string> {
+  const article = prepareArticleText(title, content);
+
+  return chatCompletion([
+    {
+      role: "system",
+      content:
+        "You write concise English prompts for text-to-image models based on news and blog articles. Return ONLY the prompt: 1–2 sentences, no quotes, no markdown, no labels. Describe one clear illustrative scene that reflects the article's main theme. Prefer modern editorial illustration style. Do not ask for text or captions inside the image.",
+    },
+    {
+      role: "user",
+      content: `Write an image generation prompt for this article:\n\n${article.text}`,
+    },
+  ]);
 }
